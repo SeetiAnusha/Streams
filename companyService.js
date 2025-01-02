@@ -60,3 +60,27 @@ exports.fetchCompetitorStatistics = async (companyWebsite) => {
         throw new Error("Failed to fetch competitor statistics");
     }
 };
+exports.getCompanyData = async (req, res) => {
+    const { companyName } = req.body;
+
+    if (!companyName) {
+        return res.status(400).json({ message: "Company name is required" });
+    }
+
+    try {
+        const companyInfo = await fetchCompanyInfo(companyName); // Fetch company info
+        const competitors = await fetchCompetitors(companyName); // Fetch competitors
+
+        // Fetch competitor statistics concurrently
+        const competitorStats = await Promise.all(
+            competitors.map(async (competitor) => {
+                const stats = await fetchCompetitorStatistics(competitor.website); // Fetch stats for each competitor
+                return { ...competitor, stats }; // Combine competitor info with their stats
+            })
+        );
+
+        res.status(200).json({ companyInfo, competitors: competitorStats }); // Send back company info and competitors' stats
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching company data", error }); // Error handling
+    }
+};
